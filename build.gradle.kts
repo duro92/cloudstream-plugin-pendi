@@ -6,11 +6,11 @@ buildscript {
         maven("https://jitpack.io")
     }
     dependencies {
-        // WAJIB: classpath AGP + Kotlin Gradle Plugin
-        classpath("com.android.tools.build:gradle:8.5.0")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24")
+        // Sesuaikan dengan Cloudstream (Kotlin 2.1)
+        classpath("com.android.tools.build:gradle:8.6.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
 
-        // Plugin Cloudstream via JitPack
+        // Plugin Cloudstream
         classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
     }
 }
