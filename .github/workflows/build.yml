@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write   # agar boleh push builds/ & repo.json
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,48 +21,73 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      # Pakai Gradle tanpa wrapper
       - uses: gradle/gradle-build-action@v3
         with:
           gradle-version: 8.7
 
-      - name: Build Cloudstream plugin (MyProvider)
-        run: gradle MyProvider:make --no-daemon
-
-      # Debug: tampilkan file hasil build agar kelihatan jalurnya
-      - name: List build outputs
-        run: |
-          echo "== Listing MyProvider/build =="
-          find MyProvider/build -maxdepth 4 -type f -printf "%p\n" || true
-
-      # Upload dengan jalur standar plugin Cloudstream
-      - name: Build ALL Cloudstream plugins (root task)
+      # build semua plugin
+      - name: Build Cloudstream plugins
         run: gradle make --no-daemon
 
-      - name: List ANY APK produced (debug)
+      # lihat file supaya gampang debug kalau perlu
+      - name: List build outputs
         run: |
-          echo "== Listing *.apk in repo =="
-          find . -type f -name "*.apk" -printf "%p\n" || true
-          echo "== Listing potential plugin dirs =="
-          ls -R build/outputs || true
-          ls -R MyProvider/build/outputs || true
+          echo "== Any .cs3 =="
+          find . -type f -name "*.cs3" -printf "%p\n" || true
+          echo "== MyProvider/build =="
+          ls -la MyProvider/build || true
 
-      - name: Upload ANY APK found
+      # publish .cs3 ke folder builds/
+      - name: Publish .cs3 to builds/
+        run: |
+          mkdir -p builds
+          # ambil semua file .cs3 yg dibuat
+          find . -type f -name "*.cs3" -print -exec cp {} builds/ \;
+          ls -la builds
+
+      # buat/overwrite repo.json sederhana
+      - name: Create repo.json
+        env:
+          REPO_URL_RAW: https://raw.githubusercontent.com/duro92/cloudstream-plugin-pendi/main
+        run: |
+          cat > repo.json <<'JSON'
+          {
+            "name": "Pendi Repo",
+            "description": "Kumpulan plugin Cloudstream buatan Pendi",
+            "version": 1,
+            "plugins": [
+              {
+                "name": "MyProvider",
+                "version": "1.0.${{ github.run_number }}",
+                "url": "REPLACE_URL/builds/MyProvider.cs3",
+                "authors": ["Pendi"],
+                "description": "Contoh provider + Ngefilm",
+                "tags": ["Movies","TV"],
+                "minApiVersion": 3
+              }
+            ]
+          }
+          JSON
+          # ganti placeholder url
+          sed -i "s#REPLACE_URL#${REPO_URL_RAW}#g" repo.json
+          echo "== repo.json =="
+          cat repo.json
+
+      # simpan builds/ & repo.json ke branch main
+      - name: Commit builds & repo.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add builds repo.json
+          git commit -m "Publish build ${{ github.run_number }}" || echo "No changes to commit"
+          git push
+
+      # tetap upload artifact untuk download cepat dari Actions
+      - name: Upload plugin artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cloudstream-apks
+          name: cs3-files
           path: |
-            build/outputs/plugin/**/*.apk
-            MyProvider/build/outputs/plugin/**/*.apk
-            **/*.apk
-          if-no-files-found: warn
-
-      # Fallback: kalau jalurnya beda (mis. outputs/apk), tetap ter-unggah
-      - name: Upload plugin artifact (fallback)
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyProvider-apk-fallback
-          path: |
-            MyProvider/build/outputs/apk/**/*.apk
-            MyProvider/build/**/MyProvider-*.apk
-          if-no-files-found: warn
+            builds/*.cs3
+            repo.json
+          if-no-files-found: error
