@@ -74,20 +74,19 @@ class NgefilmProvider : MainAPI() {
         val frames = doc.select("iframe[src], .player iframe[src], .embed-container iframe[src]")
 
         frames.forEach { f ->
-            val link = fixUrl(f.attr("src"))
+    val link = fixUrl(f.attr("src"))
+    callback(
+        newExtractorLink(
+            name,                       // source
+            "Ngefilm",                  // name
+            link,                       // url
+            mainUrl,                    // referer
+            Qualities.Unknown.value,    // quality
+            link.endsWith(".m3u8")      // isM3u8
+        )
+    )
+}
 
-            @Suppress("DEPRECATION")
-            callback(
-                ExtractorLink(
-                    source = name,
-                    name = "Ngefilm",
-                    url = link,
-                    referer = mainUrl,
-                    quality = Qualities.Unknown.value,
-                    isM3u8 = link.endsWith(".m3u8")
-                )
-            )
-        }
         return frames.isNotEmpty()
     }
 
