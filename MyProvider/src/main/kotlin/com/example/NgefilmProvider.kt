@@ -1,6 +1,7 @@
 package com.example
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.AppUtils.app
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Element
 
@@ -11,7 +12,7 @@ class NgefilmProvider : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // ===== SEARCH =====
+    // SEARCH
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/?s=${query.trim().replace(' ', '+')}"
         val doc = app.get(url).document
@@ -38,7 +39,7 @@ class NgefilmProvider : MainAPI() {
         }
     }
 
-    // ===== LOAD DETAIL =====
+    // LOAD DETAIL
     override suspend fun load(url: String): LoadResponse {
         val doc = app.get(url).document
         val title = doc.selectFirst("h1, .title, .entry-title")?.text() ?: "Ngefilm"
@@ -59,7 +60,7 @@ class NgefilmProvider : MainAPI() {
         }
     }
 
-    // ===== EXTRACT LINKS =====
+    // LOAD LINKS (signature terbaru harus ada subtitleCallback)
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -68,7 +69,6 @@ class NgefilmProvider : MainAPI() {
     ): Boolean {
         val doc = app.get(data).document
         val frames = doc.select("iframe[src], .player iframe[src], .embed-container iframe[src]")
-
         frames.forEach { f ->
             val link = fixUrl(f.attr("src"))
             callback(
@@ -85,7 +85,7 @@ class NgefilmProvider : MainAPI() {
         return frames.isNotEmpty()
     }
 
-    // ===== MAIN PAGE (opsional) =====
+    // MAIN PAGE
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val doc = app.get(mainUrl).document
         val latest = doc.select("article, .ml-item, .movie, .film, .item")
