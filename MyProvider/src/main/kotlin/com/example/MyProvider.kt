@@ -11,7 +11,5 @@ class MyProvider : MainAPI() {
     override val hasMainPage = false
     override var lang = "id"
 
-    override suspend fun search(query: String): List<SearchResponse> {
-        return emptyList()
-    }
+    override suspend fun search(query: String): List<SearchResponse> = emptyList()
 }
