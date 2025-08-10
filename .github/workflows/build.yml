@@ -16,7 +16,6 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Install Android SDK + accept licenses (diperlukan AGP)
       - uses: android-actions/setup-android@v3
 
       # Pakai Gradle tanpa wrapper
@@ -24,11 +23,29 @@ jobs:
         with:
           gradle-version: 8.7
 
-      - name: Build Cloudstream plugin
+      - name: Build Cloudstream plugin (MyProvider)
         run: gradle MyProvider:make --no-daemon
 
-      - name: Upload plugin artifact
+      # Debug: tampilkan file hasil build agar kelihatan jalurnya
+      - name: List build outputs
+        run: |
+          echo "== Listing MyProvider/build =="
+          find MyProvider/build -maxdepth 4 -type f -printf "%p\n" || true
+
+      # Upload dengan jalur standar plugin Cloudstream
+      - name: Upload plugin artifact (standard path)
         uses: actions/upload-artifact@v4
         with:
           name: MyProvider-apk
           path: MyProvider/build/outputs/plugin/**/*.apk
+          if-no-files-found: warn
+
+      # Fallback: kalau jalurnya beda (mis. outputs/apk), tetap ter-unggah
+      - name: Upload plugin artifact (fallback)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyProvider-apk-fallback
+          path: |
+            MyProvider/build/outputs/apk/**/*.apk
+            MyProvider/build/**/MyProvider-*.apk
+          if-no-files-found: warn
