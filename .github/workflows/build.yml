@@ -33,11 +33,25 @@ jobs:
           find MyProvider/build -maxdepth 4 -type f -printf "%p\n" || true
 
       # Upload dengan jalur standar plugin Cloudstream
-      - name: Upload plugin artifact (standard path)
+      - name: Build ALL Cloudstream plugins (root task)
+        run: gradle make --no-daemon
+
+      - name: List ANY APK produced (debug)
+        run: |
+          echo "== Listing *.apk in repo =="
+          find . -type f -name "*.apk" -printf "%p\n" || true
+          echo "== Listing potential plugin dirs =="
+          ls -R build/outputs || true
+          ls -R MyProvider/build/outputs || true
+
+      - name: Upload ANY APK found
         uses: actions/upload-artifact@v4
         with:
-          name: MyProvider-apk
-          path: MyProvider/build/outputs/plugin/**/*.apk
+          name: cloudstream-apks
+          path: |
+            build/outputs/plugin/**/*.apk
+            MyProvider/build/outputs/plugin/**/*.apk
+            **/*.apk
           if-no-files-found: warn
 
       # Fallback: kalau jalurnya beda (mis. outputs/apk), tetap ter-unggah
