@@ -61,29 +61,33 @@ class NgefilmProvider : MainAPI() {
     }
 
     // LOAD LINKS (signature terbaru harus ada subtitleCallback)
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val doc = app.get(data).document
-        val frames = doc.select("iframe[src], .player iframe[src], .embed-container iframe[src]")
-        frames.forEach { f ->
-            val link = fixUrl(f.attr("src"))
-            callback(
-                newExtractorLink(
-                    source = name,
-                    name = "Ngefilm",
-                    url = link,
-                    referer = mainUrl,
-                    quality = Qualities.Unknown.value,
-                    isM3u8 = link.endsWith(".m3u8")
-                )
+   override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val doc = app.get(data).document
+    val frames = doc.select("iframe[src], .player iframe[src], .embed-container iframe[src]")
+
+    frames.forEach { f ->
+        val link = fixUrl(f.attr("src"))
+
+        @Suppress("DEPRECATION")
+        callback(
+            ExtractorLink(
+                source = name,
+                name = "Ngefilm",
+                url = link,
+                referer = mainUrl,
+                quality = Qualities.Unknown.value,
+                isM3u8 = link.endsWith(".m3u8")
             )
-        }
-        return frames.isNotEmpty()
+        )
     }
+    return frames.isNotEmpty()
+}
+
 
     // MAIN PAGE
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
