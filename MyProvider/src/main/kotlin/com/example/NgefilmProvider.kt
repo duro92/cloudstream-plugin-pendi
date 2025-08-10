@@ -1,8 +1,8 @@
 package com.example
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.AppUtils.app
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.nicehttp.Requests
 import org.jsoup.nodes.Element
 
 class NgefilmProvider : MainAPI() {
@@ -12,10 +12,13 @@ class NgefilmProvider : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // SEARCH
+    // Pakai NiceHttp langsung (mengganti AppUtils.app)
+    private val http = Requests()
+
+    // ===== SEARCH =====
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/?s=${query.trim().replace(' ', '+')}"
-        val doc = app.get(url).document
+        val doc = http.get(url).document
         val items = doc.select("article, .result-item, .ml-item, .movie, .film, .item")
         return items.mapNotNull { toSearchResult(it) }
     }
@@ -39,9 +42,9 @@ class NgefilmProvider : MainAPI() {
         }
     }
 
-    // LOAD DETAIL
+    // ===== LOAD DETAIL =====
     override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url).document
+        val doc = http.get(url).document
         val title = doc.selectFirst("h1, .title, .entry-title")?.text() ?: "Ngefilm"
         val poster = doc.selectFirst(".poster img, .thumbnail img, img")?.attr("src")?.let { fixUrl(it) }
         val plot = doc.selectFirst(".plot, .entry-content, .desc, p")?.text()
@@ -60,38 +63,37 @@ class NgefilmProvider : MainAPI() {
         }
     }
 
-    // LOAD LINKS (signature terbaru harus ada subtitleCallback)
-   override suspend fun loadLinks(
-    data: String,
-    isCasting: Boolean,
-    subtitleCallback: (SubtitleFile) -> Unit,
-    callback: (ExtractorLink) -> Unit
-): Boolean {
-    val doc = app.get(data).document
-    val frames = doc.select("iframe[src], .player iframe[src], .embed-container iframe[src]")
+    // ===== EXTRACT LINKS =====
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean {
+        val doc = http.get(data).document
+        val frames = doc.select("iframe[src], .player iframe[src], .embed-container iframe[src]")
 
-    frames.forEach { f ->
-        val link = fixUrl(f.attr("src"))
+        frames.forEach { f ->
+            val link = fixUrl(f.attr("src"))
 
-        @Suppress("DEPRECATION")
-        callback(
-            ExtractorLink(
-                source = name,
-                name = "Ngefilm",
-                url = link,
-                referer = mainUrl,
-                quality = Qualities.Unknown.value,
-                isM3u8 = link.endsWith(".m3u8")
+            @Suppress("DEPRECATION")
+            callback(
+                ExtractorLink(
+                    source = name,
+                    name = "Ngefilm",
+                    url = link,
+                    referer = mainUrl,
+                    quality = Qualities.Unknown.value,
+                    isM3u8 = link.endsWith(".m3u8")
+                )
             )
-        )
+        }
+        return frames.isNotEmpty()
     }
-    return frames.isNotEmpty()
-}
 
-
-    // MAIN PAGE
+    // ===== MAIN PAGE =====
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val doc = app.get(mainUrl).document
+        val doc = http.get(mainUrl).document
         val latest = doc.select("article, .ml-item, .movie, .film, .item")
             .mapNotNull { toSearchResult(it) }
             .take(20)
